@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { connectRouter } from './connect-router';
+import { MatButtonModule } from '@angular/material/button';
 
 declare var require: any;
 const packageJson = require('../../package.json');
@@ -9,9 +10,10 @@ const packageJson = require('../../package.json');
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink],
+  imports: [CommonModule, RouterOutlet, RouterLink, MatButtonModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
+  encapsulation: ViewEncapsulation.None
 })
 export class AppComponent {
   private readonly router = inject(Router);
@@ -19,10 +21,9 @@ export class AppComponent {
   isDarkMode = signal(false);
   title = signal('mf-authentication');
   ngVersion = signal(packageJson.dependencies['@angular/core']);
-  //bdsVersion = signal(
-  //  packageJson.dependencies['@bancolombia/design-system-web']
-  //);
-  bdsVersion = signal('1.0.0');
+  materialVersion = signal(
+    packageJson.dependencies['@angular/material']
+  );
 
   constructor() {
     connectRouter();

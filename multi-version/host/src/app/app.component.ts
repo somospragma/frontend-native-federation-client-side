@@ -1,4 +1,4 @@
-import { Component, NgZone, inject, signal } from '@angular/core';
+import { Component, inject, NgZone, signal, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { ButtonModule } from "primeng/button";

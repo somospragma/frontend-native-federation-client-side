@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { connectRouter } from './connect-router';
@@ -12,6 +12,7 @@ const packageJson = require('../../package.json');
   imports: [ CommonModule, RouterOutlet, RouterLink ],
   templateUrl: './app.component.html',
   styleUrls: [ './app.component.scss' ],
+  encapsulation: ViewEncapsulation.None
 })
 export class AppComponent {
   title = signal('mf-home');

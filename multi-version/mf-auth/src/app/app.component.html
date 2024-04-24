@@ -1,23 +1,37 @@
 <div style="text-align: center">
   <nav style="">
-    <ul style="list-style: none; display: flex; gap: 1rem; justify-content: center">
-      <li><a routerLink="/page-a">Go to Page A - Host</a></li>
-      <li><a routerLink="/authentication/page-c">Go to Page C</a></li>
-      <li><a routerLink="/authentication/page-d">Go to Page D</a></li>
-      <li><a routerLink="/home/page-e">Go to Page E</a></li>
+    <ul
+      style="
+        list-style: none;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+      "
+    >
+      <li><a mat-button routerLink="/page-a">Go to Page A - Host</a></li>
+      <li>
+        <a mat-button routerLink="/authentication/page-c">Go to Page C</a>
+      </li>
+      <li>
+        <a mat-button routerLink="/authentication/page-d">Go to Page D</a>
+      </li>
+      <li><a mat-button routerLink="/home/page-e">Go to Page E</a></li>
     </ul>
   </nav>
-  <h1>{{ title() }} with Angular v{{ ngVersion() }}</h1>
-  <p>BDS v{{ bdsVersion() }}</p>
+  <h1 class="custom-font">{{ title() }} with Angular v{{ ngVersion() }}</h1>
+  <p class="custom-font">Material v{{ materialVersion() }}</p>
 
-  <button (click)="navigateTo('/page-b')">
-    <span>Go to page B</span>
-  </button>
+  <div style="margin-bottom: 10px; display: flex; gap: 1rem; justify-content: center">
+    <button mat-stroked-button color="primary" (click)="navigateTo('/page-b')">
+      Go to page B
+    </button>
 
-  <button (click)="navigateTo('/home/page-f')">
-    <span>Go to page F</span>
-  </button>
+    <button mat-stroked-button color="primary" (click)="navigateTo('/home/page-f')">
+      <span>Go to page F</span>
+    </button>
+  </div>
+
   <div class="bc-mt-5" style="border: 5px solid goldenrod; padding: 1rem">
-    <router-outlet/>
+    <router-outlet />
   </div>
 </div>
