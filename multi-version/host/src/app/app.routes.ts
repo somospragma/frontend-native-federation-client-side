@@ -24,9 +24,9 @@ export const routes: Routes = [
     component: WrapperComponent,
     data: {
       config: {
-        remoteName: 'mf-authentication',
+        remoteName: 'mf-auth',
         exposedModule: './web-components',
-        elementName: 'mf-authentication-root',
+        elementName: 'mf-auth-root',
       } as WrapperConfig,
     },
   },

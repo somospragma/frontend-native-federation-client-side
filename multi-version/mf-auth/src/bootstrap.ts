@@ -23,5 +23,5 @@ import { RouterGlobalUtil } from 'micro-frontends-config-lib';
     injector: app.injector,
   });
 
-  customElements.define('mf-authentication-root', mfAuthenticationRoot);
+  customElements.define('mf-auth-root', mfAuthenticationRoot);
 })();

@@ -3,7 +3,7 @@ const {
 } = require("@angular-architects/native-federation/config");
 
 module.exports = withNativeFederation({
-  name: "mf-authentication",
+  name: "mf-auth",
 
   exposes: {
     "./web-components": "./src/bootstrap.ts",

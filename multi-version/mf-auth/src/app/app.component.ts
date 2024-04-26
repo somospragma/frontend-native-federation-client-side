@@ -19,7 +19,7 @@ export class AppComponent {
   private readonly router = inject(Router);
 
   isDarkMode = signal(false);
-  title = signal('mf-authentication');
+  title = signal('mf-auth');
   ngVersion = signal(packageJson.dependencies['@angular/core']);
   materialVersion = signal(
     packageJson.dependencies['@angular/material']
