@@ -24,7 +24,8 @@
 				"build": {
 					"builder": "@angular-architects/native-federation:build",
 					"options": {
-						"target": "mf-home:esbuild:production"
+						"target": "mf-home:esbuild:production",
+            "main": "src/main.ts"
 					}
 				},
 				"serve": {

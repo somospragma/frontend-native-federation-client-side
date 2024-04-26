@@ -22,7 +22,7 @@ export class AppComponent {
   isDarkMode = signal(false);
   title = signal('host');
   ngVersion = signal(packageJson.dependencies['@angular/core']);
-  bdsVersion = signal(
+  primeNgVersion = signal(
     packageJson.dependencies['primeng']
   );
 
