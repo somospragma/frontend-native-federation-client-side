@@ -111,7 +111,7 @@ export const APP_ROUTES: Routes = [
 Para encontrar más detalle sobre esta implementación e incluso sobre la posibilidad de crear microfrontends
 **multi-version** y **multi-framework** recomiendo leer este articulo de _Angular Architects_: [Micro Frontends with Modern Angular – Part 2: Multi-Version and Multi-Framework Solutions with Angular Elements and Web Components](https://www.angulararchitects.io/blog/micro-frontends-with-modern-angular-part-2-multi-version-and-multi-framework-solutions-with-angular-elements-and-web-components/)
 
-## Problemas de enrutamiento entre microfrontends y solución
+### Problemas de enrutamiento entre microfrontends y solución
 
 <img
     src="host/src/assets/router-instance-example.png"
@@ -178,8 +178,12 @@ export class NotFoundComponent {
 
 Con esto también le damos soporte al estado del Router, podemos concluir que el uso de este servicio es transparente para el desarrollador.
 
-> ⚠️ **Nota**: _Aunque este enfoque es funcional y fácil de implementar, hay que pensar y cuestionar su uso a futuro, si en algún momento Angular
-> lanza una actualización donde la interfaz del Router cambie, quizá podría generar problemas en el enrutamiento_.
+**Implicaciones de este enfoque:**
+
+- _Aunque este enfoque es funcional y fácil de implementar, hay que pensar y cuestionar su uso a futuro, si en algún momento Angular
+  lanza una actualización donde la interfaz del Router cambie, quizá podría generar problemas en el enrutamiento_.
+- _Considerar que la solución implica compartir por medio del DOM el router, en caso de usar SSR revisar si esto es posible._
+- _Si un microfrontend x ya está montado (es visible), al intentar navegar a una subruta de este desde el host, no funciona._
 
 ## Ejecución
 
