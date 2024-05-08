@@ -1,8 +1,9 @@
-import { Component, signal, ViewEncapsulation } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterOutlet } from '@angular/router';
-import { connectRouter } from './connect-router';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { RoutingAPI } from 'micro-frontends-config-lib';
+import { connectRouter } from './connect-router';
 
 declare var require: any;
 const packageJson = require('../../package.json');
@@ -13,12 +14,20 @@ const packageJson = require('../../package.json');
   imports: [CommonModule, RouterOutlet, RouterLink, ButtonModule],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
-  encapsulation: ViewEncapsulation.None,
 })
 export class AppComponent {
+  private readonly router = inject(Router);
+
   title = signal('mf-home');
   ngVersion = signal(packageJson.dependencies['@angular/core']);
   primeNgVersion = signal(packageJson.dependencies['primeng']);
+
+  @HostListener('document:notifyMf', ['$event'])
+  onNotifyMFNavigate({ detail: { url, state } }: CustomEvent<RoutingAPI>) {
+    if (url.includes('home')) {
+      this.router.navigate([url], { state });
+    }
+  }
 
   constructor() {
     connectRouter();
