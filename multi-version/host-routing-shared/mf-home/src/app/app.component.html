@@ -1,0 +1,37 @@
+<div style="text-align: center">
+  <nav>
+    <ul
+      style="
+        list-style: none;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+      "
+    >
+      <li>
+        <p-button styleClass="p-button-link" routerLink="/home/page-e"
+          >Go to Page E</p-button
+        >
+      </li>
+      <li>
+        <p-button styleClass="p-button-link" routerLink="/home/page-f"
+          >Go to Page F</p-button
+        >
+      </li>
+      <li>
+        <p-button styleClass="p-button-link" routerLink="/authentication/page-d"
+          >Go to Page D</p-button
+        >
+      </li>
+    </ul>
+  </nav>
+
+  <h1>{{ title() }} with Angular v{{ ngVersion() }}</h1>
+  <p>PrimeNG v{{ primeNgVersion() }}</p>
+
+  <button pButton pRipple label="Test" class="p-button-success"></button>
+
+  <div class="mt-5" style="border: 5px solid green; padding: 1rem">
+    <router-outlet> </router-outlet>
+  </div>
+</div>
