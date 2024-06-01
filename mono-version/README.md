@@ -1,27 +1,90 @@
-# SvpNativtieFederation
+# Microfrontends mono-version con Native Federation
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 16.2.12.
+⚠️ Para una mejor experiencia de lectura recomiendo el uso de las siguientes extensiones de VsCode:
 
-## Development server
+- [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid).
+- [Markdown Preview Github Styling](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-preview-github-styles)
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+Este enfoque no presenta ningún problema de enrutamiento ya que al tener un solo package.json, se comparte el mismo sistema
+de enrutamiento `@angular/router` entre los microfrontends.
 
-## Code scaffolding
+## Arquitectura
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+Para este ejemplo se ha decidido utilizar una arquitectura de microfrontends mono-version, es decir, todos los microfrontends comparten la misma versión de Angular.
 
-## Build
+```mermaid
+graph LR
+A["`
+    _Host_
+    Angular _v16.2.0_
+`"]
+-- MF ---> B["`
+    _mf-auth_
+    Angular v16.2.0
+`"]
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+## Schematics
 
-## Running unit tests
+Para la creación de los microfrontends y host con su respectiva configuración, puedes utilizar los siguientes comandos:
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+**Comando para crear un nuevo microfrontend:**
 
-## Running end-to-end tests
+```bash
+ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote
+```
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+**Comando para crear el host:**
 
-## Further help
+```bash
+ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host
+```
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+> 🚀 Para obtener más información sobre la configuración de microfrontends con Native Federation, puedes consultar
+la [documentación](https://github.com/angular-architects/module-federation-plugin/tree/main/libs/native-federation).
+
+## Configuración
+
+La configuración inicial es sencilla, basta con crear una archivo `federation.config.js` en la raíz del proyecto y agregar la siguiente configuración:
+
+```typescript
+const { withNativeFederation } = require("@angular-architects/native-federation/config");
+
+module.exports = withNativeFederation({
+  skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
+});
+```
+
+> En este caso se ha decidido agregar paquetes de rxjs que no necesitamos en runtime.
+
+## Puntos relevantes
+
+El host debe ser el encargado de cargar el archivo `mf-manifest.json` con las rutas de los microfrontends, al final cada ruta
+no es más que un `remoteEntry.js` que se carga dinámicamente.
+
+```typescript
+// main.ts
+initFederation("/assets/federation.manifest.json")
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
+```
+
+Finalmente en las rutas del host:
+
+```typescript
+export const routes: Routes = [
+  {
+    path: "",
+    loadComponent: () => import("./pages/page-a/page-a.component").then((m) => m.PageAComponent),
+  },
+  {
+    path: "page-b",
+    loadComponent: () => import("./pages/page-b/page-b.component").then((m) => m.PageBComponent),
+  },
+  {
+    path: "authentication",
+    loadChildren: () => loadRemoteModule("mfAuthentication", "./routes").then((m) => m.routes), // Load MF Auth
+  },
+];
+```
