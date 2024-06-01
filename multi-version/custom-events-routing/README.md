@@ -1,159 +1,73 @@
-# Microfrontends multi-version con Native Federation
-
-⚠️ Para una mejor experiencia de lectura recomiendo el uso de las siguientes extensiones de VsCode:
-
-- [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid).
-- [Markdown Preview Github Styling](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-preview-github-styles)
-
-Esta App contiene una prototipo base usando una arquitectura de microfrontends con **múltiples
-versiones** de Angular e incluso usando diferentes **Bibliotecas de Componentes**.
-
-## Arquitectura
-
-Considerando el uso de múltiples versiones de Angular la recomendación es usar una **librería npm** para
-compartir elementos reutilizables entre los microfrontends.
-
-```mermaid
-graph LR
-A["`
-    _Host_
-    Angular _v16.2_
-`"]
--- MF ---> B["`
-    _mf-auth_
-    Angular v17.13
-`"]
-A -- MF ---> C["`
-    _mf-home_
-    Angular v16.2
-`"]
-
-A -.-> D[npm-lib]
-B -.-> E[npm-lib]
-C -.-> F[npm-lib]
-```
-
-### Bien, pero ¿cómo se logra esto?
-
-Bueno, para ello se recomienda el uso de **Native Federation** y **angular-elements** para convertir un componente Angular en un **web-component**.
-Si vemos lo archivos bootstrap de cada microfrontend encontraremos algo como lo siguiente:
-
-```typescript
-import { NgZone } from '@angular/core';
-
-(async () => {
-  const app = await createApplication({
-    providers: […],
-  });
-
-  const mfe2Root = createCustomElement(AppComponent, {
-    injector: app.injector,
-  });
-
-  customElements.define('mfe2-root', mfe2Root);
-})();
-```
-
-De esa manera creamos el **web-component**, lo registramos en el **DOM** y lo exponemos en el archivo **federation.config**
-
-```typescript
-  exposes: {
-    "./web-components": "./src/bootstrap.ts",
-  }
-```
-
-Finalmente el host define un WrapperComponent encargado de cargar cada microfrontend en el DOM. Cada microfrontend cuenta
-con su configuración que será usada para la carga.
-
-```typescript
-export interface WrapperConfig {
-  remoteName: string;
-  exposedModule: string;
-  elementName: string;
-}
-
-@Component([...])
-export class WrapperComponent implements OnInit {
-  elm = inject(ElementRef);
-
-  @Input() config = initWrapperConfig;
-
-  async ngOnInit() {
-    const { exposedModule, remoteName, elementName } = this.config;
-
-    await loadRemoteModule(remoteName, exposedModule);
-    const root = document.createElement(elementName);
-    this.elm.nativeElement.appendChild(root);
-  }
-}
-```
-
-Rutas del host:
-
-```typescript
-export const APP_ROUTES: Routes = [
-  [...],
-  {
-    path: 'passengers',
-    component: WrapperComponent,
-    data: {
-      config: {
-        remoteName: 'mfe2',
-        exposedModule: './web-components',
-        elementName: 'mfe2-root',
-      } as WrapperConfig,
-    },
-  },
-  [...]´
-];
-```
-
-Para encontrar más detalle sobre esta implementación e incluso sobre la posibilidad de crear microfrontends
-**multi-version** y **multi-framework** recomiendo leer este articulo de _Angular Architects_: [Micro Frontends with Modern Angular – Part 2: Multi-Version and Multi-Framework Solutions with Angular Elements and Web Components](https://www.angulararchitects.io/blog/micro-frontends-with-modern-angular-part-2-multi-version-and-multi-framework-solutions-with-angular-elements-and-web-components/)
-
-### Problemas de enrutamiento entre microfrontends y solución
+# Problemas de enrutamiento entre microfrontends y solución
 
 <img
-    src="host/src/assets/router-instance-example.png"
+    src="host/src/assets/router-instance-custom-events.png"
     alt="mf instance example"
-    style="width: 500px"
+    style="width: 550px"
     align="right"
   />
 Esta solución pinta bien, pero trae consigo un problema de enrutamiento entre microfrontends. Debido a que cada microfront es representado
 por un **web-component** y cuenta con sus propios **paquetes**, _genera su propia instancia de enrutamiento local_, es decir, solo conoce sus rutas y no
 las externas (del host o de otros microfrontends).
 
-Analizando la problemática se propone compartir el router del host (**quien si conoce las rutas y subrutas de los otros mf**) a los microfrontends por medio del objeto _**globalThis**_.
+Analizando la problemática se propone usar Custom Events para comunicar el enrutamiento del host hacia los microfrontends y viceversa. Para ello hacemos
+uso de la siguiente utilidad transversal ubicada en la librería **micro-frontends-config-lib**:
 
 ```typescript
-// Host -> app.component.ts
+export class RoutingNotifier {
+  static notifyHost(routingApi: RoutingAPI) {
+    this.notify('notifyHost', routingApi);
+  }
 
-constructor() {
-  (globalThis as any).ngZone = inject(NgZone);
-  (globalThis as any).router = inject(Router);
+  static notifyMf(routingApi: RoutingAPI) {
+    this.notify('notifyMf', routingApi);
+  }
+
+  private static notify(event: string, routingApi: RoutingAPI) {
+    const evento = new CustomEvent(event, {
+      detail: routingApi,
+    });
+    document.dispatchEvent(evento);
+  }
 }
 ```
 
-> 💡 Al final esto se traduce en un problema de comunicación.
+## Comunicación host hacia microfrontends
 
-Cada microfront provee un servicio que usa como valor el router del host:
+En el host comenzamos definiendo una suscripción a los eventos del router para comunicarlos hacia los microfrontends, es importante
+incluir el **estado del router** y la **url actual** (la usaremos más adelante).
 
 ```typescript
-//  bootstrap.ts
-const app = await createApplication({
-  providers: [
-    (globalThis as any).router
-      ? { provide: RouterGlobalUtil, useValue: (globalThis as any).router }
-      : [],
-  ],
-});
-
-// router-global-util.ts
-@Injectable()
-export class RouterGlobalUtil extends Router {}
+ngOnInit() {
+  this.subcription = this.router.events.subscribe((event) => {
+    if (event instanceof NavigationEnd) {
+      RoutingNotifier.notifyMf({
+        url: event.urlAfterRedirects,
+        state: this.location.getState() as RouterState,
+      } as RoutingAPI);
+    }
+  });
+}
 ```
 
-Considerando una mejor experiencia de desarrollo, el RouterGlobal le da manejo a las rutas externas si estas no existen en el microfrontend.
+Además de ello en el app.component de cada mf agregamos un listener para recibir los eventos (url y state) emitidos por el host.
+
+```typescript
+ @HostListener('document:notifyHost', ['$event'])
+  onNotifyHostNavigate({ detail: { url, state } }: CustomEvent<RoutingAPI>) {
+    if (url.includes('authentication')) {
+      this.router.navigate([url], { state });
+    }
+  }
+```
+
+> Algo muy importante que la URL contenga el nombre dle micro para que solo realice la navegación en ese caso.
+
+De esta manera podemos navegar desde el host hacia una ruta o subruta de un microfrontend.
+
+## Comunicación microfrontends hacia host
+
+Para este tipo hacemos usos del componente **NotFoundComponent** que se encarga de emitir un evento hacia el host cuando no encuentra una ruta.
 
 ```typescript
 // mf-auth -> app.routes.ts
@@ -162,42 +76,35 @@ Considerando una mejor experiencia de desarrollo, el RouterGlobal le da manejo a
   component: NotFoundComponent,
 }
 
-// NotFoundComponent
+// micro-frontends-config-lib -> not-found.component.ts
+@Component({
+  selector: 'app-not-found',
+  template: '',
+  standalone: true,
+})
 export class NotFoundComponent {
-  private readonly globalRouter = inject(RouterGlobalUtil);
   private readonly location = inject(Location);
 
   constructor() {
-    this.globalRouter.navigate(
-      [`${location.pathname.substring(1)}${location.search}`],
-      { state: this.location.getState() as RouterState }
-    );
+    const routingApi: RoutingAPI = {
+      url: `${location.pathname.substring(1)}${location.search}`,
+      state: this.location.getState() as RouterState,
+    };
+
+    RoutingNotifier.notifyHost(routingApi);
   }
 }
 ```
 
-Con esto también le damos soporte al estado del Router, podemos concluir que el uso de este servicio es transparente para el desarrollador.
+> Hacemos uso de la utilidad **RoutingNotifier** para emitir un evento hacia el host con la URL y el estado del router.
 
-**Implicaciones de este enfoque:**
+Finalmente en el host agregamos un listener para recibir los eventos emitidos por los microfrontends.
 
-- _Aunque este enfoque es funcional y fácil de implementar, hay que pensar y cuestionar su uso a futuro, si en algún momento Angular
-  lanza una actualización donde la interfaz del Router cambie, quizá podría generar problemas en el enrutamiento_.
-- _Considerar que la solución implica compartir por medio del DOM el router, en caso de usar SSR revisar si esto es posible._
-- _Si un microfrontend x ya está montado (es visible), al intentar navegar a una subruta de este desde el host, no funciona._
+```typescript
+  @HostListener('document:notifyHost', ['$event'])
+  onNotifyHostNavigate({ detail: { url, state } }: CustomEvent<RoutingAPI>) {
+    this.router.navigate([url], { state });
+  }
+```
 
-## Ejecución
-
-Para correr cel proyecto seguimos los siguientes pasos:
-
-1. Instalar dependencias del host y microfrontends.
-2. Instalar dependencias de la librería compartida.
-3. Buildear y linkear la librería a cada microfrontend (esto se realiza ya que la librería es local).
-
-   ```bash
-   ng build
-   ...
-   npm link ../libs/dist/micro-frontends-config-lib --legacy-peer-deps
-   ```
-
-4. Ejecutar el comando `npm start` en la carpeta **multi-version** para ejecutar el script **run-fronts-angular.js**,
-   este script nos permite ejecutar los mf que deseemos junto con el host.
+Con estas configuraciones conseguimos una navegación **bidireccional** solucionando el problema de enrutamiento entre microfrontends.

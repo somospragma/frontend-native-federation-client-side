@@ -32,7 +32,7 @@ const packageJson = require('../../package.json');
 export class AppComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
-  private subcription!: Subscription;
+  private subscription!: Subscription;
 
   @HostListener('document:notifyHost', ['$event'])
   onNotifyHostNavigate({ detail: { url, state } }: CustomEvent<RoutingAPI>) {
@@ -46,22 +46,20 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor() {
     (globalThis as any).ngZone = inject(NgZone);
-    (globalThis as any).router = inject(Router);
   }
 
   ngOnInit() {
-    this.subcription = this.router.events.subscribe((event) => {
+    this.subscription = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        const routingApi: RoutingAPI = {
+        RoutingNotifier.notifyMf({
           url: event.urlAfterRedirects,
           state: this.location.getState() as RouterState,
-        };
-        RoutingNotifier.notifyMf(routingApi);
+        } as RoutingAPI);
       }
     });
   }
 
   ngOnDestroy() {
-    this.subcription.unsubscribe();
+    this.subscription.unsubscribe();
   }
 }
