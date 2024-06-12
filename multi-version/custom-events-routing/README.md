@@ -16,11 +16,11 @@ uso de la siguiente utilidad transversal ubicada en la librería **micro-fronten
 ```typescript
 export class RoutingNotifier {
   static notifyHost(routingApi: RoutingAPI) {
-    this.notify('notifyHost', routingApi);
+    this.notify("notifyHost", routingApi);
   }
 
   static notifyMf(routingApi: RoutingAPI) {
-    this.notify('notifyMf', routingApi);
+    this.notify("notifyMf", routingApi);
   }
 
   private static notify(event: string, routingApi: RoutingAPI) {
@@ -61,7 +61,7 @@ Además de ello en el app.component de cada mf agregamos un listener para recibi
   }
 ```
 
-> Algo muy importante que la URL contenga el nombre dle micro para que solo realice la navegación en ese caso.
+> Algo muy importante que la URL contenga el nombre del micro para que solo realice la navegación en ese caso.
 
 De esta manera podemos navegar desde el host hacia una ruta o subruta de un microfrontend.
 
