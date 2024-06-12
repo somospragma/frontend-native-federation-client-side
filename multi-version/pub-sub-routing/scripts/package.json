@@ -1,0 +1,20 @@
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "engineStrict": true,
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  },
+  "scripts": {
+    "start": "node run-fronts-angular.js"
+  },
+  "devDependencies": {
+    "concurrently": "7.0.0",
+    "inquirer": "8.0.0",
+    "node-fetch": "2.6.7",
+    "ora": "6.3.0",
+    "ora-classic": "5.4.2",
+    "prompts": "2.4.2"
+  }
+}
