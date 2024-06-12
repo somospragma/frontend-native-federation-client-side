@@ -1,67 +1,88 @@
 # Problemas de enrutamiento entre microfrontends y solución
 
 <img
-    src="host/src/assets/router-instance-custom-events.png"
+    src="host/src/assets/router-instance-pubsub.png"
     alt="mf instance example"
     style="width: 550px"
     align="right"
   />
-Esta solución pinta bien, pero trae consigo un problema de enrutamiento entre microfrontends. Debido a que cada microfront es representado
-por un **web-component** y cuenta con sus propios **paquetes**, _genera su propia instancia de enrutamiento local_, es decir, solo conoce sus rutas y no
-las externas (del host o de otros microfrontends).
 
-Analizando la problemática se propone usar Custom Events para comunicar el enrutamiento del host hacia los microfrontends y viceversa. Para ello hacemos
-uso de la siguiente utilidad transversal ubicada en la librería **micro-frontends-config-lib**:
+Analizando la problemática se propone usar la librería **pubsub-js** para comunicar el enrutamiento del host hacia los microfrontends y viceversa:
+
+```typescript
+import PubSub from "pubsub-js";
+
+const EVENT_NAME = "FOO";
+
+const mySubscriber = (msg, data) => console.log(msg, data);
+const token = PubSub.subscribe(EVENT_NAME, mySubscriber);
+
+PubSub.publish(EVENT_NAME, "hello world!");
+```
+
+Más información en [PubSubJS - npm](https://www.npmjs.com/package/pubsub-js).
+
+Para lograr este fin hacemos uso de la siguiente utilidad transversal ubicada en la librería **micro-frontends-config-lib**:
 
 ```typescript
 export class RoutingNotifier {
   static notifyHost(routingApi: RoutingAPI) {
-    this.notify('notifyHost', routingApi);
+    this.notify(ROUTING_CONSTANTS.NOTIFYHOST, routingApi);
   }
 
   static notifyMf(routingApi: RoutingAPI) {
-    this.notify('notifyMf', routingApi);
+    this.notify(ROUTING_CONSTANTS.NOTIFYMF, routingApi);
   }
 
   private static notify(event: string, routingApi: RoutingAPI) {
-    const evento = new CustomEvent(event, {
-      detail: routingApi,
-    });
-    document.dispatchEvent(evento);
+    PubSub.publish(event, routingApi);
   }
 }
 ```
 
 ## Comunicación host hacia microfrontends
 
-En el host comenzamos definiendo una suscripción a los eventos del router para comunicarlos hacia los microfrontends, es importante
-incluir el **estado del router** y la **url actual** (la usaremos más adelante).
+En el host comenzamos definiendo una suscripción a los eventos del router para comunicarlos hacia los microfrontends, para ello
+haremos uso del método **publish** de **PubSub**, es importante incluir el **estado del router** y la **url actual** (la usaremos más adelante).
 
 ```typescript
 ngOnInit() {
+  this.subscribeToHostRoutingChanges();
+}
+
+private subscribeToHostRoutingChanges() {
   this.subcription = this.router.events.subscribe((event) => {
     if (event instanceof NavigationEnd) {
-      RoutingNotifier.notifyMf({
+      PubSub.publish(ROUTING_CONSTANTS.NOTIFYMF, {
         url: event.urlAfterRedirects,
         state: this.location.getState() as RouterState,
-      } as RoutingAPI);
+      });
     }
   });
 }
 ```
 
-Además de ello en el app.component de cada mf agregamos un listener para recibir los eventos (url y state) emitidos por el host.
+Además de ello en el app.component de cada mf nos suscribimos a la constante publicada previamente y así recibir
+los eventos (url y state) emitidos por el host.
 
 ```typescript
- @HostListener('document:notifyHost', ['$event'])
-  onNotifyHostNavigate({ detail: { url, state } }: CustomEvent<RoutingAPI>) {
-    if (url.includes('authentication')) {
-      this.router.navigate([url], { state });
+ngOnInit(): void {
+  this.subscribeToPubSubRoutingEvents();
+}
+
+private subscribeToPubSubRoutingEvents() {
+  PubSub.subscribe(
+    ROUTING_CONSTANTS.NOTIFYMF,
+    (__, { url, state }: MfNotification) => {
+      if (url.includes('authentication')) {
+        this.router.navigate([url], { state: state });
+      }
     }
-  }
+  );
+}
 ```
 
-> Algo muy importante que la URL contenga el nombre dle micro para que solo realice la navegación en ese caso.
+> Algo muy importante que la URL contenga el nombre del micro para que solo realice la navegación en ese caso.
 
 De esta manera podemos navegar desde el host hacia una ruta o subruta de un microfrontend.
 
@@ -101,9 +122,14 @@ export class NotFoundComponent {
 Finalmente en el host agregamos un listener para recibir los eventos emitidos por los microfrontends.
 
 ```typescript
-  @HostListener('document:notifyHost', ['$event'])
-  onNotifyHostNavigate({ detail: { url, state } }: CustomEvent<RoutingAPI>) {
-    this.router.navigate([url], { state });
+  ngOnInit() {
+    this.subscribeToPubSubRoutingEvents();
+  }
+
+  private subscribeToPubSubRoutingEvents() {
+    PubSub.subscribe(ROUTING_CONSTANTS.NOTIFYHOST, (__, data: RoutingAPI) => {
+      this.router.navigate([data.url], { state: data.state });
+    });
   }
 ```
 
